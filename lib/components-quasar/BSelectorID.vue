@@ -207,11 +207,19 @@ export default defineComponent({
     const onSelect = (val: any) => {
       console.log("onSelect", val);
       if (!val || (Array.isArray(val) && val.length === 0)) {
+        internalModel.value = props.multiple ? [] : "";
         emit("update:modelValue", props.multiple ? [] : undefined);
         emit("update:label", "");
+        if (props.optionExtra) {
+          emit("update:extra", "");
+        }
         return; // Or perform a different action for no selection
       }
       if (props.multiple) {
+        // Must be applied synchronously: q-select builds its next emitted array
+        // from the current model-value, so a stale internalModel truncates the
+        // selection on the following click.
+        internalModel.value = val;
         const values = val ? val.map((v: any) => v[props.optionValue]) : [];
         const labels = val
           ? val.map((v: any) => v[props.optionLabel]).join(", ")
@@ -230,10 +238,32 @@ export default defineComponent({
       }
     };
 
+    const toIdArray = (value: unknown): (string | number)[] => {
+      if (value === undefined || value === null || value === "") {
+        return [];
+      }
+      const list = Array.isArray(value) ? value : [value];
+      return list.map((item: any) =>
+        item && typeof item === "object" ? item[props.optionValue] : item
+      );
+    };
+
+    // internalModel holds option objects while modelValue holds ids, so they can
+    // never be compared by identity. Comparing the resolved ids is what stops an
+    // id emitted by onSelect from bouncing back in and re-triggering loadOne.
+    const matchesInternalModel = (value: string | string[] | undefined) => {
+      const incoming = toIdArray(value);
+      const current = toIdArray(internalModel.value);
+      return (
+        incoming.length === current.length &&
+        incoming.every((id, index) => id === current[index])
+      );
+    };
+
     watch(
       () => props.modelValue,
       async (newValue) => {
-        if (props.modelValue === internalModel.value) {
+        if (matchesInternalModel(newValue)) {
           return;
         }
         loadOne(newValue);
