@@ -310,7 +310,7 @@ class KratosService {
    * ── Session cache (roadmap 020, item 3) ────────────────────────────────────
    *
    * THE PROBLEM. `getSession()` is called from two per-request hot paths in
-   * `components-shadcn/auth/initializeAuth.ts`: the global axios REQUEST
+   * the consuming app's auth bootstrap: the global axios REQUEST
    * interceptor (to read `tenant_id` for the `X-Tenant-ID` header) and the
    * `OpenAPI.TOKEN` resolver (invoked by every generated client call). Each was
    * an uncached network round-trip, so every API call was preceded by one or

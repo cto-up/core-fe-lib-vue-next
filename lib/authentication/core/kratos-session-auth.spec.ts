@@ -11,7 +11,7 @@ import axios from "axios";
  * Why this needs its own suite: the cache sits in front of the single source of
  * truth for "who is this request from". The two consumers are the axios request
  * interceptor (X-Tenant-ID) and the OpenAPI.TOKEN resolver (bearer token), both
- * in components-shadcn/auth/initializeAuth.ts, and both run on EVERY API call.
+ * wired up by the consuming app's auth bootstrap, and both run on EVERY API call.
  * A wrong answer there is an auth bug, not a performance bug.
  *
  * The safety net that makes the cache tolerable at all: the BACKEND
