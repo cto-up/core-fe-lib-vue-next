@@ -5,6 +5,7 @@
 import { type KratosSession } from "../core/kratos-service";
 import { useUserStore } from "core-fe-lib/stores/user-store";
 import type { LoggedUser } from "core-fe-lib/models/logged-user";
+import { Role } from "core-fe-lib/openapi/core/models/Role";
 
 export async function updateUserFromSession(
   kratosSession: KratosSession | null
@@ -61,11 +62,20 @@ export async function updateUserFromSession(
   try {
     const { DefaultService } = await import("core-fe-lib/openapi/core");
     const profile = await DefaultService.getMeProfile();
+    const isActingReseller = profile.is_acting_reseller ?? false;
+    // A reseller's CUSTOMER_ADMIN holds no membership — and so no role — in the
+    // customer tenants it manages, yet it is a customer admin of every one of
+    // them. Fold that into roles here (the backend grants the same role from the
+    // same condition) so every downstream check agrees: isCustomerAdmin,
+    // hasPrivilege, hasRole and the router's "has any role" guard.
     userStore.setUser({
       ...userStore.user!,
       name: profile.name || user.name,
+      roles: isActingReseller
+        ? [...new Set([...roles, Role.CUSTOMER_ADMIN])]
+        : roles,
       isReseller: profile.is_reseller ?? false,
-      isActingReseller: profile.is_acting_reseller ?? false,
+      isActingReseller,
     });
   } catch {
     userStore.setUser({
